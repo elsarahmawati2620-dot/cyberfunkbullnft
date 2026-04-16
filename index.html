@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyberpunk Bull NFT — Official Collection on Tempo Chain</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.0.0/web3.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+    body { font-family: 'VT323', monospace; }
+    .glitch { color: #00f0ff; font-family: 'Press Start 2P', cursive; text-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff; animation: glitch 1s infinite linear alternate; }
+    @keyframes glitch { 0% { text-shadow: 2px 0 #ff00ff, -2px 0 #00ffff; } 20% { text-shadow: -2px 0 #ff00ff, 2px 0 #00ffff; } 40% { text-shadow: 2px 0 #ff00ff, -2px 0 #00ffff; } }
+
+    .nft-card { transition: all 0.4s ease; cursor: pointer; }
+    .nft-card:hover { transform: translateY(-12px) scale(1.06); box-shadow: 0 0 60px #ff00ff, 0 0 40px #00ffff; }
+
+    .neon-button { transition: all 0.3s; }
+    .neon-button:hover { box-shadow: 0 0 40px #ff00ff, 0 0 60px #00ffff; transform: scale(1.08); }
+
+    .rarity-legendary { background-color: #ff00ff; color: #000; font-weight: bold; }
+    .rarity-epic { background-color: #aa00ff; color: #fff; font-weight: bold; }
+    .rarity-rare { background-color: #00ffff; color: #000; font-weight: bold; }
+
+    #lightbox, #metadata-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    #lightbox img { max-width: 90%; max-height: 85vh; border: 4px solid #ff00ff; box-shadow: 0 0 80px #ff00ff, 0 0 120px #00ffff; border-radius: 12px; }
+    .modal-content {
+      background: #0a001f; border: 4px solid #ff00ff; max-width: 520px; width: 92%;
+      padding: 24px; border-radius: 12px; box-shadow: 0 0 80px #ff00ff;
+    }
+
+    .mint-loading { display: none; flex-direction: column; align-items: center; gap: 16px; color: #00ffff; }
+    .spinner { width: 60px; height: 60px; border: 6px solid #ff00ff; border-top-color: #00ffff; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-black text-[#00ffcc] overflow-x-hidden">
+
+  <!-- Navbar -->
+  <nav class="fixed top-0 w-full z-50 bg-black/90 backdrop-blur-md border-b border-[#ff00ff]/30">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <span class="text-4xl">🐂</span>
+        <h1 class="text-3xl font-bold tracking-widest glitch">CYBERBULL 77</h1>
+      </div>
+      <div class="flex items-center gap-4">
+        <button id="connectButton" onclick="connectWallet()" 
+                class="neon-button px-8 py-3 border-2 border-[#00ffff] text-[#00ffff] hover:bg-[#00ffff]/10 font-bold flex items-center gap-2">
+          <i class="fab fa-metamask text-2xl"></i> CONNECT METAMASK
+        </button>
+        <div id="walletInfo" class="hidden flex items-center gap-4">
+          <div class="text-[#00ffff] font-bold text-lg px-5 py-2 bg-black/70 border border-[#00ffff]/50 rounded-2xl flex items-center gap-2">
+            <span id="balanceAmount">0.0000</span> <span class="text-xs opacity-70">PATHUSD</span>
+          </div>
+          <button onclick="disconnectWallet()" class="px-6 py-3 border-2 border-red-500 text-red-400 hover:bg-red-500/10 font-bold rounded-xl">DISCONNECT</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="min-h-screen flex items-center justify-center relative bg-[radial-gradient(at_center,#1a0033_0%,#000000_70%)]">
+    <div class="text-center z-10 px-6">
+      <p class="text-[#ff00ff] text-2xl mb-4 tracking-[6px]">TEMPO CHAIN MAINNET • OFFICIAL COLLECTION</p>
+      <h1 class="text-7xl md:text-8xl font-bold glitch mb-6 leading-none">CYBERPUNK<br>BULL NFT</h1>
+      <p class="max-w-2xl mx-auto text-3xl text-[#00ffcc]/90 mb-12">Only <span class="text-white font-bold">77</span> will ever exist.</p>
+      <a href="#mint" class="neon-button inline-block px-16 py-6 border-4 border-[#ff00ff] text-[#ff00ff] text-3xl font-bold tracking-widest hover:bg-[#ff00ff] hover:text-black">MINT YOUR BULL</a>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section class="py-20 bg-[#0a001f]">
+    <div class="max-w-7xl mx-auto px-6">
+      <h2 class="text-6xl glitch text-center mb-16">THE COLLECTION — <span id="gallery-count" class="text-white">0/77</span> REVEALED</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8" id="nft-grid"></div>
+    </div>
+  </section>
+
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="if(event.target === this) closeLightbox()">
+    <span class="absolute top-8 right-8 text-5xl cursor-pointer text-[#ff00ff]" onclick="closeLightbox()">×</span>
+    <img id="lightbox-image" src="" alt="Cyber Bull NFT">
+  </div>
+
+  <!-- Metadata Modal -->
+  <div id="metadata-modal" onclick="if(event.target === this) closeMetadataModal()">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-6 border-b border-[#ff00ff]/50 pb-4">
+        <h3 id="modal-title" class="text-2xl glitch">NFT METADATA</h3>
+        <span onclick="closeMetadataModal()" class="text-4xl cursor-pointer text-[#ff00ff]">×</span>
+      </div>
+      <div id="modal-content" class="text-sm leading-relaxed text-[#00ffcc]"></div>
+      <button onclick="closeMetadataModal()" class="mt-6 w-full neon-button py-3 bg-[#ff00ff] text-black font-bold">CLOSE METADATA</button>
+    </div>
+  </div>
+
+  <!-- Mint Section -->
+  <section id="mint" class="py-24 bg-black border-t-4 border-[#ff00ff]">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <h2 class="text-6xl glitch mb-10">MINT YOUR CYBERBULL</h2>
+      <div class="bg-[#0f0022] border-4 border-[#ff00ff] p-12 rounded-3xl">
+        <p class="text-4xl mb-4">Single Mint: <span class="text-white font-bold">2 PATHUSD</span></p>
+        <p class="text-4xl mb-8">Batch Mint (2): <span class="text-white font-bold">4 PATHUSD</span></p>
+        <p class="text-2xl mb-6">Total Supply: <span class="text-white font-bold">77</span></p>
+        <p id="minted-count" class="text-2xl mb-10">Minted: <span class="text-white font-bold">0</span> / 77</p>
+        
+        <div id="mint-loading" class="mint-loading">
+          <div class="spinner"></div>
+          <p class="loading-text" id="loading-text">APPROVING & MINTING...</p>
+        </div>
+
+        <div id="status" class="min-h-[50px] text-lg mb-8"></div>
+        
+        <div class="flex flex-col md:flex-row gap-4 justify-center max-w-md mx-auto">
+          <button onclick="mintNFT(1)" id="mintSingleBtn" disabled
+                  class="neon-button flex-1 py-6 text-2xl font-bold bg-[#ff00ff] text-black rounded-2xl">
+            MINT 1 (2 PATHUSD)
+          </button>
+          <button onclick="mintNFT(2)" id="mintBatchBtn" disabled
+                  class="neon-button flex-1 py-6 text-2xl font-bold bg-[#00ffff] text-black rounded-2xl">
+            BATCH MINT 2 (4 PATHUSD)
+          </button>
+        </div>
+
+        <p class="mt-8 text-sm opacity-70">Max 2 per transaction • PATHUSD Token Required</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- X Link -->
+  <a href="https://x.com/tempothebull" target="_blank" class="fixed bottom-6 right-6 bg-black/80 hover:bg-black px-5 py-3 rounded-2xl border border-[#00ffff] flex items-center gap-2 text-[#00ffff]">
+    <i class="fab fa-x-twitter text-xl"></i> <span>@tempothebull</span>
+  </a>
+
+  <!-- Footer -->
+  <footer class="bg-[#0a001f] py-12 text-center border-t border-[#ff00ff]/30">
+    <p class="text-sm opacity-70">© 2026 Cyberpunk Bull NFT • Only 77 will ever exist on Tempo Mainnet</p>
+  </footer>
+
+  <script>
+    // ==================== CONFIG ====================
+    const PATHUSD_ADDRESS = "0x20c0000000000000000000000000000000000000";
+    const CONTRACT_ADDRESS = "0x9E660a5fe0280Bd51EEc3EbCae0BCc35733697AB"; // GANTI DENGAN ADDRESS CONTRACT KAMU
+
+    const CONTRACT_ABI = [ /* Paste ABI lengkap kamu di sini */ ];
+
+    let web3 = null;
+    let account = null;
+    const TEMPO_MAINNET_CHAIN_ID = "0x1079";
+
+    const PATHUSD_ABI = [
+      {"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"type":"function"},
+      {"constant":true,"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"type":"function"}
+    ];
+
+    // ==================== 77 NFT DATA LENGKAP ====================
+    const nfts = [
+      {id:1, file:"bull 1.jpg", name:"Cyber Bull #001", rarity:"legendary", description:"The legendary founder bull with glowing diamond horns.", attributes:[{trait_type:"Background",value:"Neon Rain"},{trait_type:"Horns",value:"Diamond"},{trait_type:"Eyes",value:"Laser Gold"}]},
+      {id:2, file:"bull 2.jpg", name:"Cyber Bull #002", rarity:"legendary", description:"Shadow assassin bull with chrome blades.", attributes:[{trait_type:"Background",value:"Digital Void"},{trait_type:"Horns",value:"Blade"},{trait_type:"Eyes",value:"Red Glow"}]},
+      {id:3, file:"bull 3.jpg", name:"Cyber Bull #003", rarity:"legendary", description:"Neon emperor bull ruling the grid.", attributes:[{trait_type:"Background",value:"Matrix Core"},{trait_type:"Horns",value:"Royal Gold"},{trait_type:"Eyes",value:"Purple Neon"}]},
+      {id:4, file:"bull 4.jpg", name:"Cyber Bull #004", rarity:"legendary", description:"Glitch overlord with unstable form.", attributes:[{trait_type:"Background",value:"Glitch Storm"},{trait_type:"Horns",value:"Fractal"},{trait_type:"Eyes",value:"Error Blue"}]},
+      {id:5, file:"bull 5.jpg", name:"Cyber Bull #005", rarity:"legendary", description:"The final boss bull of Tempo Chain.", attributes:[{trait_type:"Background",value:"Void Throne"},{trait_type:"Horns",value:"Obsidian"},{trait_type:"Eyes",value:"White Flame"}]},
+      
+      // Epic (6-25)
+      ...Array.from({length: 20}, (_, i) => ({
+        id: 6 + i,
+        file: `bull ${6 + i}.jpg`,
+        name: `Cyber Bull #${(6 + i).toString().padStart(3, '0')}`,
+        rarity: "epic",
+        description: "A powerful elite cyber bull with rare traits.",
+        attributes: [
+          {trait_type: "Background", value: "Neon Rain"},
+          {trait_type: "Horns", value: "Chrome"},
+          {trait_type: "Eyes", value: "Laser Red"}
+        ]
+      })),
+
+      // Rare (26-77)
+      ...Array.from({length: 52}, (_, i) => ({
+        id: 26 + i,
+        file: `bull ${26 + i}.jpg`,
+        name: `Cyber Bull #${(26 + i).toString().padStart(3, '0')}`,
+        rarity: "rare",
+        description: "A standard cyberpunk bull patrolling the streets.",
+        attributes: [
+          {trait_type: "Background", value: "Digital Void"},
+          {trait_type: "Horns", value: "Steel"},
+          {trait_type: "Eyes", value: "Cyber Blue"}
+        ]
+      }))
+    ];
+
+    // ==================== WALLET FUNCTIONS ====================
+    async function connectWallet() {
+      if (!window.ethereum) return alert("MetaMask not detected!");
+      try {
+        web3 = new Web3(window.ethereum);
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        account = accounts[0];
+
+        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: TEMPO_MAINNET_CHAIN_ID }] });
+
+        document.getElementById("connectButton").classList.add("hidden");
+        document.getElementById("walletInfo").classList.remove("hidden");
+        await updateBalance();
+        await updateMintedCount();
+        document.getElementById("mintSingleBtn").disabled = false;
+        document.getElementById("mintBatchBtn").disabled = false;
+      } catch (err) {
+        alert("Failed to connect to Tempo Mainnet.");
+      }
+    }
+
+    async function updateBalance() {
+      if (!web3 || !account) return;
+      try {
+        const token = new web3.eth.Contract(PATHUSD_ABI, PATHUSD_ADDRESS);
+        const bal = await token.methods.balanceOf(account).call();
+        document.getElementById("balanceAmount").textContent = parseFloat(web3.utils.fromWei(bal, 'ether')).toFixed(4);
+      } catch (e) {}
+    }
+
+    async function updateMintedCount() {
+      if (!web3) return;
+      try {
+        const nft = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        const minted = await nft.methods.totalSupply().call();
+        document.getElementById("minted-count").innerHTML = `Minted: <span class="text-white font-bold">${minted}</span> / 77`;
+        document.getElementById("gallery-count").textContent = `${minted}/77`;
+      } catch (e) {}
+    }
+
+    function disconnectWallet() {
+      account = null; web3 = null;
+      document.getElementById("connectButton").classList.remove("hidden");
+      document.getElementById("walletInfo").classList.add("hidden");
+    }
+
+    // ==================== MINT FUNCTION ====================
+    async function mintNFT(quantity) {
+      if (!account) return alert("Please connect MetaMask first");
+      if (quantity < 1 || quantity > 2) return;
+
+      const loadingEl = document.getElementById("mint-loading");
+      const statusEl = document.getElementById("status");
+      const loadingText = document.getElementById("loading-text");
+      const singleBtn = document.getElementById("mintSingleBtn");
+      const batchBtn = document.getElementById("mintBatchBtn");
+
+      singleBtn.disabled = true;
+      batchBtn.disabled = true;
+      loadingEl.style.display = "flex";
+      statusEl.textContent = "";
+
+      try {
+        const pathusd = new web3.eth.Contract(PATHUSD_ABI, PATHUSD_ADDRESS);
+        const nftContract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+
+        const totalPrice = web3.utils.toWei((2 * quantity).toString(), "ether");
+
+        loadingText.textContent = "Approving PATHUSD...";
+        const allowance = await pathusd.methods.allowance(account, CONTRACT_ADDRESS).call();
+        if (BigInt(allowance) < BigInt(totalPrice)) {
+          await pathusd.methods.approve(CONTRACT_ADDRESS, totalPrice).send({ from: account });
+        }
+
+        loadingText.textContent = quantity === 2 ? "Batch Minting 2 NFTs..." : "Minting NFT...";
+        const tx = await nftContract.methods.mint(quantity).send({ from: account });
+
+        statusEl.innerHTML = `🎉 Successfully minted <strong>${quantity}</strong> CyberBull(s)!`;
+        statusEl.className = "text-green-400";
+
+        await updateBalance();
+        await updateMintedCount();
+
+      } catch (error) {
+        console.error("Mint Error:", error);
+        let msg = "Transaction failed.";
+        if (error.message.includes("execution reverted")) {
+          msg = "Contract Error: " + (error.message.split("reverted:")[1] || error.message);
+        } else if (error.code === 4001) {
+          msg = "User rejected the transaction.";
+        }
+        statusEl.textContent = msg;
+        statusEl.className = "text-red-400";
+      } finally {
+        loadingEl.style.display = "none";
+        singleBtn.disabled = false;
+        batchBtn.disabled = false;
+      }
+    }
+
+    // ==================== RENDER GALLERY ====================
+    function renderNFTs() {
+      const grid = document.getElementById("nft-grid");
+      grid.innerHTML = "";
+      nfts.forEach(nft => {
+        const card = document.createElement("div");
+        card.className = `nft-card bg-[#1a0033] border-2 border-[#ff00ff]/40 rounded-2xl overflow-hidden`;
+        card.innerHTML = `
+          <img src="${nft.file}" class="w-full aspect-square object-cover" onclick="showLightbox('${nft.file}')">
+          <div class="p-4 text-center">
+            <p class="text-[#00ffff]">#${nft.id.toString().padStart(3, '0')} - ${nft.name}</p>
+            <span class="inline-block mt-2 px-4 py-1 text-xs font-bold rounded-full ${getRarityClass(nft.rarity)}">
+              ${nft.rarity.toUpperCase()}
+            </span>
+            <div class="mt-4">
+              <button onclick="showMetadata(${nft.id}); event.stopImmediatePropagation();" 
+                      class="neon-button w-full py-2 text-xs font-bold bg-[#00ffff] text-black rounded">METADATA</button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function getRarityClass(rarity) {
+      if (rarity === "legendary") return "rarity-legendary";
+      if (rarity === "epic") return "rarity-epic";
+      if (rarity === "rare") return "rarity-rare";
+      return "";
+    }
+
+    function showLightbox(src) {
+      document.getElementById("lightbox-image").src = src;
+      document.getElementById("lightbox").style.display = "flex";
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightbox").style.display = "none";
+    }
+
+    function showMetadata(id) {
+      const nft = nfts.find(n => n.id === id);
+      if (!nft) return;
+      let html = `<p class="text-[#ff00ff] text-xl mb-4">#${nft.id.toString().padStart(3,'0')} — ${nft.name}</p>`;
+      html += `<p class="mb-6 opacity-90">${nft.description}</p>`;
+      html += `<div class="grid grid-cols-2 gap-3 text-xs mb-6">`;
+      nft.attributes.forEach(attr => {
+        html += `<div class="bg-black/70 p-3 rounded border border-[#ff00ff]/30"><span class="block text-[#00ffff]">${attr.trait_type}</span><span class="text-white font-bold">${attr.value}</span></div>`;
+      });
+      html += `</div>`;
+      document.getElementById("modal-title").textContent = `NFT #${nft.id.toString().padStart(3,'0')} METADATA`;
+      document.getElementById("modal-content").innerHTML = html;
+      document.getElementById("metadata-modal").style.display = "flex";
+    }
+
+    function closeMetadataModal() {
+      document.getElementById("metadata-modal").style.display = "none";
+    }
+
+    window.onload = () => renderNFTs();
+  </script>
+</body>
+</html>
